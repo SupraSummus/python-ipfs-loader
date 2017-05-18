@@ -1,0 +1,3 @@
+from QmTuqjiwi86wbQzJt6zr5q8BkfZRKWbhcKCtzA8q3mFZVk import value
+import QmTuqjiwi86wbQzJt6zr5q8BkfZRKWbhcKCtzA8q3mFZVk as mod
+print(value, mod.value)
