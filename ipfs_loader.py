@@ -28,26 +28,32 @@ class IPFSLoader(InspectLoader):
 
     @lru_cache(maxsize=1024)
     def is_package(self, path):
-        # TODO do this without try/catch
         try:
             with urllib.request.urlopen(
                 self.finder.api_url + 'ls?arg=' + ipfs_path_from_fullname(path)
             ) as response:
-                # TODO check presence of __init__.py
-                json.loads(response.read())
-            return True
-        except urllib.error.HTTPError:
-            # TODO check status code
+                data = json.loads(response.read())['Objects']
+                assert(len(data) == 1)
+                return any([link['Name'] == '__init__.py' for link in data[0]['Links']])
+        except urllib.error.HTTPError as err:
+            # asserting that if `ls` failed and response is JSON it isn't a package
+            data = json.loads(err.read())
             return False
+        except Exception as err:
+            raise ImportError('error checking is_package /ipfs/' + ipfs_path_from_fullname(path)) from err
 
     def get_source(self, path):
-        with urllib.request.urlopen(
-            self.finder.api_url + 'cat?arg=' + ipfs_file_path_from_fullname(
-                path,
-                self.is_package(path)
-            )
-        ) as response:
-            return response.read().decode('UTF-8')
+        ipfs_path = ipfs_file_path_from_fullname(
+            path,
+            self.is_package(path)
+        )
+        try:
+            with urllib.request.urlopen(
+                self.finder.api_url + 'cat?arg=' + ipfs_path
+            ) as response:
+                return response.read()
+        except Exception as err:
+            raise ImportError('couldn\'t import /ipfs/' + ipfs_path) from err
 
 
 class IPFSFinder(MetaPathFinder):
